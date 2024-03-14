@@ -50,23 +50,25 @@ while True:
     response = sqs_client.receive_message(
     QueueUrl = req_queue_url,
     MaxNumberOfMessages = 10,
-    WaitTimeSeconds = 20
+    WaitTimeSeconds = 20,
+    MessageAttributeNames = ["All"],
+    VisibilityTimeout=400
 )
 
     if 'Messages' in response:
         for message in response['Messages']:
+            coorelation_Id= message["MessageAttributes"]["CorrelationId"]["StringValue"]
+            print(coorelation_Id)
             msg_body = message['Body']
-            imgae_name = msg_body.split(":")[1][2:-2].strip()
-            print("Image_Name", imgae_name)
-            image_full_path = static_path +  imgae_name
+            print(msg_body)
             response = s3_client.get_object(
                 Bucket=in_bucket_name,
-                Key=imgae_name
+                Key=msg_body
             )
             result = face_match(response['Body'], 'data.pt')
             print(result[0], "result..........................")
             
-            out_img_name = imgae_name.split('.')[0]
+            out_img_name = msg_body.split('.')[0]
             out_data = result[0]
             json_data = json.dumps(out_data)
             s3_client.put_object(
@@ -76,7 +78,13 @@ while True:
             )
             sqs_client.send_message(
                 QueueUrl = res_queue_url,
-                MessageBody = f"{out_img_name}:{result[0]}"
+                MessageBody = f"{out_img_name}:{result[0]}",
+                MessageAttributes = {
+                    "CorrelationId": {
+                    "DataType": 'String',
+                    "StringValue": coorelation_Id
+                    }
+                }
             )
             sqs_client.delete_message(QueueUrl = req_queue_url, ReceiptHandle=message['ReceiptHandle'])
 
