@@ -40,7 +40,7 @@ sqs_client = boto3.client('sqs', region_name = 'us-east-1')
 req_queue_url = "https://sqs.us-east-1.amazonaws.com/905418127621/1229935683-req-queue"
 res_queue_url = "https://sqs.us-east-1.amazonaws.com/905418127621/1229935683-res-queue"
 
-s3_client = boto3.client('s3')
+s3_client = boto3.client('s3', region_name = 'us-east-1')
 in_bucket_name = '1229935683-in-bucket'
 out_bucket_name = '1229935683-out-bucket'
 
