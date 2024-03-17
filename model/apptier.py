@@ -1,5 +1,4 @@
 import boto3
-from flask import Flask, request
 import torch
 from PIL import Image
 from facenet_pytorch import MTCNN, InceptionResnetV1
@@ -7,6 +6,7 @@ from torchvision import datasets
 from torch.utils.data import DataLoader
 
 import json
+import time
 
 
 
@@ -20,7 +20,7 @@ def face_match(img_path, data_path): # img_path= location of photo, data_path= l
     face, prob = mtcnn(img, return_prob=True) # returns cropped face and probability
     emb = resnet(face.unsqueeze(0)).detach() # detech is to make required gradient false
 
-    saved_data = torch.load('data.pt') # loading data.pt file
+    saved_data = torch.load('/home/ubuntu/data.pt') # loading data.pt file
     embedding_list = saved_data[0] # getting embedding data
     name_list = saved_data[1] # getting list of names
     dist_list = [] # list of matched distances, minimum distance is used to identify the person
@@ -49,10 +49,10 @@ static_path = "../dataset/face_images_1000/"
 while True:
     response = sqs_client.receive_message(
     QueueUrl = req_queue_url,
-    MaxNumberOfMessages = 10,
+    MaxNumberOfMessages = 1,
     WaitTimeSeconds = 20,
     MessageAttributeNames = ["All"],
-    VisibilityTimeout=400
+    VisibilityTimeout=20
 )
 
     if 'Messages' in response:
@@ -87,6 +87,6 @@ while True:
                 }
             )
             sqs_client.delete_message(QueueUrl = req_queue_url, ReceiptHandle=message['ReceiptHandle'])
-
+            time.sleep(10) 
     else:
         print("no msg received....")
