@@ -57,7 +57,7 @@ const object = {};
 
 const startInstance = async (num) => {
   const instanceParams = {
-    ImageId: "ami-04eaa7e36015e4eb4",
+    ImageId: "ami-003d3c000e3f7d02a",
     InstanceType: "t2.micro",
     KeyName: "my_key_pair",
     MinCount: 1,

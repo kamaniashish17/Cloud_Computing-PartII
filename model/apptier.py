@@ -5,7 +5,6 @@ from facenet_pytorch import MTCNN, InceptionResnetV1
 from torchvision import datasets
 from torch.utils.data import DataLoader
 
-import json
 import time
 
 
@@ -15,7 +14,7 @@ resnet = InceptionResnetV1(pretrained='vggface2').eval() # initializing resnet f
 
 def face_match(img_path, data_path): # img_path= location of photo, data_path= location of data.pt
     # getting embedding matrix of the given img
-    print(img_path)
+    # print(img_path)
     img = Image.open(img_path)
     face, prob = mtcnn(img, return_prob=True) # returns cropped face and probability
     emb = resnet(face.unsqueeze(0)).detach() # detech is to make required gradient false
@@ -56,37 +55,35 @@ while True:
 )
 
     if 'Messages' in response:
-        for message in response['Messages']:
-            coorelation_Id= message["MessageAttributes"]["CorrelationId"]["StringValue"]
-            print(coorelation_Id)
-            msg_body = message['Body']
-            print(msg_body)
-            response = s3_client.get_object(
-                Bucket=in_bucket_name,
-                Key=msg_body
-            )
-            result = face_match(response['Body'], 'data.pt')
-            print(result[0], "result..........................")
-            
-            out_img_name = msg_body.split('.')[0]
-            out_data = result[0]
-            json_data = json.dumps(out_data)
-            s3_client.put_object(
-                Bucket=out_bucket_name,
-                Key=out_img_name,
-                Body=json_data
-            )
-            sqs_client.send_message(
-                QueueUrl = res_queue_url,
-                MessageBody = f"{out_img_name}:{result[0]}",
-                MessageAttributes = {
-                    "CorrelationId": {
-                    "DataType": 'String',
-                    "StringValue": coorelation_Id
-                    }
+        message = response['Messages'][0]
+        coorelation_Id= message["MessageAttributes"]["CorrelationId"]["StringValue"]
+        # print(coorelation_Id)
+        msg_body = message['Body']
+        # print(msg_body)
+        response = s3_client.get_object(
+            Bucket=in_bucket_name,
+            Key=msg_body
+        )
+        result = face_match(response['Body'], '/home/ubuntu/data.pt')
+        # print(result[0], "result..........................")
+        
+        out_img_name = msg_body.split('.')[0]
+        s3_client.put_object(
+            Bucket=out_bucket_name,
+            Key=out_img_name,
+            Body=result[0]
+        )
+        sqs_client.send_message(
+            QueueUrl = res_queue_url,
+            MessageBody = f"{out_img_name}:{result[0]}",
+            MessageAttributes = {
+                "CorrelationId": {
+                "DataType": 'String',
+                "StringValue": coorelation_Id
                 }
-            )
-            sqs_client.delete_message(QueueUrl = req_queue_url, ReceiptHandle=message['ReceiptHandle'])
-            time.sleep(10) 
+            }
+        )
+        sqs_client.delete_message(QueueUrl = req_queue_url, ReceiptHandle=message['ReceiptHandle'])
+        time.sleep(10) 
     else:
         print("no msg received....")
